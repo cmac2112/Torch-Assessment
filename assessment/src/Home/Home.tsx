@@ -3,6 +3,7 @@ import type {ListParams } from "../../api/mockApi"
 import { useDebounce } from "./Hooks/useDebounce"
 import type {QueryParams} from "./Types/types"; 
 import EventsList from "./Components/EventsList";
+import "./Home.css"
 
 
 const Home = () => {

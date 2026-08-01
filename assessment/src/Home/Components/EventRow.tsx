@@ -1,6 +1,6 @@
 import { type RowComponentProps } from "react-window";
 import { type RawEvent } from "../../../api/mockApi";
-
+import "../Home.css"
 interface EventRowData {
   rows: Map<number, RawEvent>;
 }

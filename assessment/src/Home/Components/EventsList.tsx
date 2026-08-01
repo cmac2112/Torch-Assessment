@@ -5,9 +5,11 @@ import { List } from "react-window";
 import type { ListParams } from "../../../api/mockApi"
 import { listEvents } from "../../../api/mockApi";
 import EventRow from "./EventRow";
+import "../Home.css"
 const BATCH_SIZE = 40;
 const ROW_HEIGHT = 150;
 const LIST_HEIGHT = 640; //hard coded for now, if time allows we can compute this with a useEffect or useLayoutEffect
+//bringing this on a vertical screen does not resize it vertically either
 interface EventListProps{
     queryParams: QueryParams;
 }
