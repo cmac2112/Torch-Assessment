@@ -3,25 +3,7 @@ import { type RowComponentProps } from "react-window";
 import type { EventRowData } from "../Types/types";
 import { useEventModal } from "../Hooks/useEventModal";
 import "../Home.css"
-
-//------helpers--------------------
-const formatTimestamp = (value: unknown): string => {
-  if (value === null || value === undefined) return "—";
-  const ms =
-    typeof value === "number"
-      ? (value < 1e12 ? value * 1000 : value)
-      : Date.parse(String(value));
-  if (Number.isNaN(ms)) return "—";
-  return new Date(ms).toLocaleString();
-};
-
-const formatConfidence = (value: unknown): number | null => {
-  const num = typeof value === "string" ? Number(value) : value;
-  if (typeof num !== "number" || Number.isNaN(num)) return null;
-  return num > 1 ? num / 100 : num;
-};
-
-//---------------------------------------
+import { formatConfidence, formatTimestamp } from "../Shared/Formatting";
 
 const EventRow = ({ index, style, ariaAttributes, rows }: RowComponentProps<EventRowData>) => {
   const { openEvent } = useEventModal();
@@ -46,6 +28,8 @@ const EventRow = ({ index, style, ariaAttributes, rows }: RowComponentProps<Even
     }
   };
 
+
+
   return (
     <div style={style} {...ariaAttributes} className="event-row">
       <div
@@ -57,7 +41,7 @@ const EventRow = ({ index, style, ariaAttributes, rows }: RowComponentProps<Even
         aria-label={`View details for event ${id}`}
       >
         <div className="event-card-header">
-          <span className="event-badge">{String(item.type ?? "unknown")}</span>
+          <span className="event-badge" style={{color:`var(--badge-${item.type ?? "unknown"})`}}>{String(item.type ?? "unknown")}</span>
           <span className="event-id">{String(item.id)}</span>
           <span className="event-time">{formatTimestamp(item.timestamp)}</span>
         </div>

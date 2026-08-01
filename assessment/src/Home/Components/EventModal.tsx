@@ -3,29 +3,10 @@ import type { DetailResult } from "../../../api/mockApi";
 import { getEvent, isAbort } from "../../../api/mockApi";
 import { useEventModal } from "../Hooks/useEventModal";
 import "../Home.css";
-
+import { formatConfidence, formatTimestamp } from "../Shared/Formatting";
 type ModalResult =
   | { id: string; status: "error"; error: string }
   | { id: string; status: "ready"; detail: DetailResult };
-
-const formatTimestamp = (value: unknown): string => {
-  if (value === null || value === undefined) return "—";
-  const ms =
-    typeof value === "number"
-      ? value < 1e12
-        ? value * 1000
-        : value
-      : Date.parse(String(value));
-  if (Number.isNaN(ms)) return "—";
-  return new Date(ms).toLocaleString();
-};
-
-const formatConfidence = (value: unknown): string => {
-  const num = typeof value === "string" ? Number(value) : value;
-  if (typeof num !== "number" || Number.isNaN(num)) return "—";
-  const pct = num > 1 ? num : num * 100;
-  return `${Math.round(Math.min(100, Math.max(0, pct)))}%`;
-};
 
 // only rendered by EventModalProvider once currentId is set
 const EventModal = () => {
@@ -38,12 +19,24 @@ const EventModal = () => {
   useEffect(() => {
     const controller = new AbortController();
 
-    getEvent(eventId, controller.signal)
-      .then((detail) => setResult({ id: eventId, status: "ready", detail }))
-      .catch((err) => {
-        if (isAbort(err)) return;
-        setResult({ id: eventId, status: "error", error: err instanceof Error ? err.message : String(err) });
-      });
+    const load = async () => {
+      try {
+        const detail = await getEvent(eventId, controller.signal);
+        setResult({ id: eventId, status: "ready", detail });
+      } catch (err) {
+        if (isAbort(err)) {
+          return;
+        } else {
+          setResult({
+            id: eventId,
+            status: "error",
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    };
+
+    load();
 
     return () => controller.abort();
   }, [eventId, reloadKey]);

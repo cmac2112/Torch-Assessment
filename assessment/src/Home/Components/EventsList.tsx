@@ -3,7 +3,7 @@ import type { RowsState, RowsAction, QueryParams, EventRowData } from "../Types/
 import { useInfiniteLoader } from "react-window-infinite-loader";
 import { List } from "react-window";
 import type { ListParams } from "../../../api/mockApi"
-import { listEvents, isAbort } from "../../../api/mockApi";
+import { listEvents, isAbort, isRetryable } from "../../../api/mockApi";
 import EventRow from "./EventRow";
 import "../Home.css"
 const BATCH_SIZE = 40;
@@ -79,7 +79,9 @@ const EventsList:React.FC<EventListProps> = ({queryParams}) => {
             return;
           } catch (err) {
             if (isAbort(err)) return;
-            if (attempt === maxAttempts - 1) {
+            // a 4xx won't succeed on a second try — only 5xx/429/network errors are worth
+            // spending a constrained connection on
+            if (!isRetryable(err) || attempt === maxAttempts - 1) {
               dispatch({
                 type: "BATCH_FAIL",
                 generation,

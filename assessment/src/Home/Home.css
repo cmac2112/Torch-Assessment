@@ -12,10 +12,33 @@
   gap: 12px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+/* label stacked above its control so the toolbar stays scannable */
+.events-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.events-field-grow {
+  flex: 1 1 240px;
+}
+
+.events-label {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  padding-left: 2px;
 }
 
 .events-search,
-.events-select {
+.events-select,
+.events-sort-dir {
   font: inherit;
   color: var(--text-h);
   background: var(--bg);
@@ -26,20 +49,24 @@
 }
 
 .events-search {
-  flex: 1 1 240px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.events-select {
-  flex: 0 0 auto;
+.events-sort-dir {
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .events-search:hover,
-.events-select:hover {
+.events-select:hover,
+.events-sort-dir:hover {
   border-color: var(--accent-border);
 }
 
 .events-search:focus-visible,
-.events-select:focus-visible {
+.events-select:focus-visible,
+.events-sort-dir:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-bg);
@@ -126,6 +153,16 @@
   border-color: var(--accent-border);
   box-shadow: var(--shadow);
   transform: translateY(-1px);
+}
+
+/* keyboard users need to see which row they're on before pressing Enter */
+.event-card:focus-visible,
+.events-retry:focus-visible,
+.modal-close:focus-visible,
+.modal-related-link:focus-visible,
+.modal-breadcrumb-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .event-card-header {
