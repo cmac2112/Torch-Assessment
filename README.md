@@ -8,7 +8,7 @@ Virtualized list, filters, debounced search, modal popup with more details on cl
 
 ## Virtualized list vs pagination
 The descision for using a virtualzed list instead of pagination comes soley from a user experience persepective. Forcing useres to click next and back on pages of only 25 or so 
-is tedious from a UX perspective, having an infinite scroll would make a better user experience overall.
+is tedious from a UX perspective, having an infinite scroll would make a better user experience overall. However, we will have to batch our virtualization requests in groups similarly to pagination but still giving the effect of an infinite scroll
 
 ## State management
 Handling loading state, data state, and error state seperately in their own `useStates` allows for different types of states to occur unintentionally. This application should use a `useReducer` to manage state

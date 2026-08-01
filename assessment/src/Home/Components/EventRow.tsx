@@ -1,9 +1,8 @@
+import type { KeyboardEvent } from "react";
 import { type RowComponentProps } from "react-window";
-import { type RawEvent } from "../../../api/mockApi";
+import type { EventRowData } from "../Types/types";
+import { useEventModal } from "../Hooks/useEventModal";
 import "../Home.css"
-interface EventRowData {
-  rows: Map<number, RawEvent>;
-}
 
 //------helpers--------------------
 const formatTimestamp = (value: unknown): string => {
@@ -25,6 +24,7 @@ const formatConfidence = (value: unknown): number | null => {
 //---------------------------------------
 
 const EventRow = ({ index, style, ariaAttributes, rows }: RowComponentProps<EventRowData>) => {
+  const { openEvent } = useEventModal();
   const item = rows.get(index);
 
   if (!item) {
@@ -36,10 +36,26 @@ const EventRow = ({ index, style, ariaAttributes, rows }: RowComponentProps<Even
   }
 
   const confidence = formatConfidence(item.confidence);
+  const id = String(item.id);
+
+  const handleOpen = () => openEvent(id);
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openEvent(id);
+    }
+  };
 
   return (
     <div style={style} {...ariaAttributes} className="event-row">
-      <div className="event-card">
+      <div
+        className="event-card"
+        role="button"
+        tabIndex={0}
+        onClick={handleOpen}
+        onKeyDown={handleKeyDown}
+        aria-label={`View details for event ${id}`}
+      >
         <div className="event-card-header">
           <span className="event-badge">{String(item.type ?? "unknown")}</span>
           <span className="event-id">{String(item.id)}</span>

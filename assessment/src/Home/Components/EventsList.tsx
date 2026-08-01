@@ -1,17 +1,16 @@
-import { useReducer, useCallback, useMemo } from "react";
+import { useReducer, useCallback, useMemo, useRef } from "react";
 import type { RowsState, RowsAction, QueryParams, EventRowData } from "../Types/types";
 import { useInfiniteLoader } from "react-window-infinite-loader";
 import { List } from "react-window";
 import type { ListParams } from "../../../api/mockApi"
-import { listEvents } from "../../../api/mockApi";
+import { listEvents, isAbort } from "../../../api/mockApi";
 import EventRow from "./EventRow";
 import "../Home.css"
 const BATCH_SIZE = 40;
-const ROW_HEIGHT = 150;
-const LIST_HEIGHT = 640; //hard coded for now, if time allows we can compute this with a useEffect or useLayoutEffect
-//bringing this on a vertical screen does not resize it vertically either
+const ROW_HEIGHT = 200;
 interface EventListProps{
     queryParams: QueryParams;
+
 }
 
 const initialRowsState: RowsState = {
@@ -46,6 +45,10 @@ const EventsList:React.FC<EventListProps> = ({queryParams}) => {
      state.rows.has(index),
    [state.rows]);
 
+  // In-flight batch fetches, keyed by "startIndex-stopIndex", so we can abort
+  // ones the user has already scrolled past instead of letting them finish uselessly.
+  const pendingRef = useRef(new Map<string, { startIndex: number; stopIndex: number; controller: AbortController }>());
+
   const loadMoreRows = useCallback(
     async (startIndex: number, stopIndex: number) => {
       const generation = state.generation;
@@ -55,30 +58,40 @@ const EventsList:React.FC<EventListProps> = ({queryParams}) => {
         limit: stopIndex - startIndex + 1,
       };
 
-      //add abort controllers here next to stop loading of items that were scrolled by too fast (if time allows)
+      //create a new abort controller for each request, if the user passes the stopIndex before the rows
+      //are done loading, then we need to cancel the request
+      const batchKey = `${startIndex}-${stopIndex}`;
+      const controller = new AbortController();
+      pendingRef.current.set(batchKey, { startIndex, stopIndex, controller });
+
       const maxAttempts = 3;
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        try {
-          const result = await listEvents(batchParams);
-          dispatch({
-            type: "BATCH_SUCCESS",
-            generation,
-            startIndex,
-            items: result.items,
-            total: result.total,
-          });
-          return;
-        } catch (err) {
-          if (attempt === maxAttempts - 1) {
+      try {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          try {
+            const result = await listEvents(batchParams, controller.signal);
             dispatch({
-              type: "BATCH_FAIL",
+              type: "BATCH_SUCCESS",
               generation,
-              error: err instanceof Error ? err.message : String(err),
+              startIndex,
+              items: result.items,
+              total: result.total,
             });
             return;
+          } catch (err) {
+            if (isAbort(err)) return;
+            if (attempt === maxAttempts - 1) {
+              dispatch({
+                type: "BATCH_FAIL",
+                generation,
+                error: err instanceof Error ? err.message : String(err),
+              });
+              return;
+            }
+            await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
           }
-          await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
         }
+      } finally {
+        pendingRef.current.delete(batchKey);
       }
     },
     [queryParams, state.generation],
@@ -86,7 +99,7 @@ const EventsList:React.FC<EventListProps> = ({queryParams}) => {
 
   const rowCount = state.total ?? BATCH_SIZE;
 
-  const onRowsRendered = useInfiniteLoader({
+  const infiniteLoaderOnRowsRendered = useInfiniteLoader({
     isRowLoaded,
     loadMoreRows,
     rowCount,
@@ -94,7 +107,27 @@ const EventsList:React.FC<EventListProps> = ({queryParams}) => {
     threshold: BATCH_SIZE,
   });
 
-  const rowProps = useMemo<EventRowData>(() => ({ rows: state.rows }), [state.rows]);
+  // Abort any in-flight batch that has fallen outside the visible range 
+  // so fast scrolling doesn't leave requests running for stuff that will never even be seen
+  const onRowsRendered = useCallback(
+    (indices: { startIndex: number; stopIndex: number }) => {
+      infiniteLoaderOnRowsRendered(indices);
+      const rangeStart = indices.startIndex - BATCH_SIZE;
+      const rangeStop = indices.stopIndex + BATCH_SIZE;
+      pendingRef.current.forEach(({ startIndex, stopIndex, controller }, key) => {
+        if (stopIndex < rangeStart || startIndex > rangeStop) {
+          controller.abort();
+          pendingRef.current.delete(key);
+        }
+      });
+    },
+    [infiniteLoaderOnRowsRendered],
+  );
+
+  const rowProps = useMemo<EventRowData>(
+    () => ({ rows: state.rows }),
+    [state.rows],
+  );
 
   const rowKey = useCallback(
     (index: number, data: EventRowData) => {
@@ -138,7 +171,7 @@ const EventsList:React.FC<EventListProps> = ({queryParams}) => {
         rowKey={rowKey}
         onRowsRendered={onRowsRendered}
         overscanCount={10}
-        style={{ height: LIST_HEIGHT, width: "100%" }}
+        style={{ height: "80vh", width: "100%" }}
         className="events-list"
         role="list"
         aria-label="Events"

@@ -208,7 +208,7 @@ function transport(signal?: AbortSignal): Promise<void> {
     const ms = MIN_LATENCY + Math.random() * (MAX_LATENCY - MIN_LATENCY);
     const timer = setTimeout(() => {
       signal?.removeEventListener('abort', onAbort);
-      if (Math.random() < FAILURE_RATE) reject(new ApiError('Upstream unavailable', 503));
+      if (Math.random() < FAILURE_RATE) reject(new ApiError('Upstream unavailable (this is an intended random error to demonstrate retry logic)', 503));
       else resolve();
     }, ms);
 
@@ -293,7 +293,7 @@ export async function listEvents(
     if (av === null) return 1;
     if (bv === null) return -1;
     if (typeof av === 'string' || typeof bv === 'string') {
-      return String(av).localeCompare(String(bv)) * mult;
+      return String(av).localeCompare(String(bv), undefined, { numeric: true }) * mult; //ensure we are sorting numerically for id
     }
     return (av - bv) * mult;
   });
